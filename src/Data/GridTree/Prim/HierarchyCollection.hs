@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -23,14 +24,16 @@ import qualified Data.Map as Map
 --------------------------------------------------------------------------------
 
 
-newtype HierarchyHandle = HierarchyHandle Int
+newtype HierarchyHandle :: * where
+    HierarchyHandle :: Int -> HierarchyHandle
     deriving (Eq, Ord)
 
 
-data HierarchyCollection = HierarchyCollection {
-    _hierarchyGrids :: Map HierarchyHandle BoundedCollection,
-    _hierarchyGraph :: Map HierarchyHandle [HierarchyHandle]
-}
+data HierarchyCollection :: * where
+    HierarchyCollection :: {
+        _hierarchyGrids :: Map HierarchyHandle BoundedCollection,
+        _hierarchyGraph :: Map HierarchyHandle [HierarchyHandle] }
+        -> HierarchyCollection
 
 
 hierarchyRoot :: HierarchyHandle

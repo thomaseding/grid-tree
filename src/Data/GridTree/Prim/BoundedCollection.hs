@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -17,10 +18,12 @@ import Data.GridTree.Prim.DisjointCollection
 --------------------------------------------------------------------------------
 
 
-newtype BoundedHandle = BoundedHandle DisjointHandle
+newtype BoundedHandle :: * where
+    BoundedHandle :: DisjointHandle -> BoundedHandle
 
 
-data BoundedCollection = BoundedCollection (Grid 'Absolute) DisjointCollection
+data BoundedCollection :: * where
+    BoundedCollection :: Grid 'Absolute -> DisjointCollection -> BoundedCollection
 
 
 makeBoundedCollection :: Grid 'Absolute -> BoundedCollection

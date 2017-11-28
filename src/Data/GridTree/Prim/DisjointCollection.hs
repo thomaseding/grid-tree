@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -16,10 +17,12 @@ import Data.GridTree.Prim.UnstructuredCollection
 --------------------------------------------------------------------------------
 
 
-newtype DisjointHandle = DisjointHandle UnstructuredHandle
+newtype DisjointHandle :: * where
+    DisjointHandle :: UnstructuredHandle -> DisjointHandle
 
 
-newtype DisjointCollection = DisjointCollection UnstructuredCollection
+newtype DisjointCollection :: * where
+    DisjointCollection :: UnstructuredCollection -> DisjointCollection
 
 
 makeDisjointCollection :: DisjointCollection

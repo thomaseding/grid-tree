@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -15,10 +16,12 @@ import Data.GridTree.Prim.GridCollection (GridCollection(..))
 --------------------------------------------------------------------------------
 
 
-newtype UnstructuredHandle = UnstructuredHandle Int
+newtype UnstructuredHandle :: * where
+    UnstructuredHandle :: Int -> UnstructuredHandle
 
 
-data UnstructuredCollection = UnstructuredCollection [Grid 'Absolute]
+data UnstructuredCollection :: * where
+    UnstructuredCollection :: [Grid 'Absolute] -> UnstructuredCollection
 
 
 makeUnstructuredCollection :: UnstructuredCollection

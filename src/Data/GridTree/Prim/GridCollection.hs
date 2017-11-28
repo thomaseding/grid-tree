@@ -16,7 +16,7 @@ import Data.Maybe (maybeToList)
 --------------------------------------------------------------------------------
 
 
-class GridCollection collection handle | collection -> handle, handle -> collection where
+class GridCollection (collection :: *) (handle :: *) | collection -> handle, handle -> collection where
     gridCollectionAdd :: Grid 'Absolute -> collection -> Maybe (collection, handle)
     gridCollectionGrid :: collection -> handle -> Maybe (Grid 'Absolute)
     gridCollectionHandles :: collection -> [handle]
