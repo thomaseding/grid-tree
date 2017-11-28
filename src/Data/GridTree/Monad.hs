@@ -10,10 +10,10 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Data.GridTree.GridTree (
+module Data.GridTree.Monad (
     GridHandle,
-    GridTree,
-    runGridTree,
+    GridMonad,
+    runGridMonad,
     getRootHandle,
     boundaryOf,
     childrenOf,
@@ -32,40 +32,40 @@ newtype GridHandle :: * -> * where
     GridHandle :: HierarchyHandle -> GridHandle s
 
 
-newtype GridTree :: * -> * -> * where
-    GridTree :: {
-        unGridTree :: State HierarchyCollection a }
-        -> GridTree s a
+newtype GridMonad :: * -> * -> * where
+    GridMonad :: {
+        unGridMonad :: State HierarchyCollection a }
+        -> GridMonad s a
     deriving (Functor, Applicative, Monad)
 
 
-runGridTree :: forall a. Grid 'Absolute -> (forall s. GridTree s a) -> a
-runGridTree grid action = let
+runGridMonad :: forall a. Grid 'Absolute -> (forall s. GridMonad s a) -> a
+runGridMonad grid action = let
     st = makeHierarchyCollection grid
-    in (`evalState` st) $ unGridTree action
+    in (`evalState` st) $ unGridMonad action
 
 
-gridTreePut :: HierarchyCollection -> GridTree s ()
-gridTreePut = GridTree . put
+gridTreePut :: HierarchyCollection -> GridMonad s ()
+gridTreePut = GridMonad . put
 
 
-gridTreeGet :: GridTree s HierarchyCollection
-gridTreeGet = GridTree get
+gridTreeGet :: GridMonad s HierarchyCollection
+gridTreeGet = GridMonad get
 
 
-boundaryOf :: GridHandle s -> GridTree s (Grid 'Absolute)
+boundaryOf :: GridHandle s -> GridMonad s (Grid 'Absolute)
 boundaryOf (GridHandle handle) = do
     coll <- gridTreeGet
     case getHierarchyGrid coll handle of
-        Nothing -> error "GridTree: Internal logic error."
+        Nothing -> error "GridMonad: Internal logic error."
         Just grid -> return grid
 
 
-getRootHandle :: GridTree s (GridHandle s)
+getRootHandle :: GridMonad s (GridHandle s)
 getRootHandle = return $ GridHandle hierarchyRoot
 
 
-childrenOf :: GridHandle s -> GridTree s [GridHandle s]
+childrenOf :: GridHandle s -> GridMonad s [GridHandle s]
 childrenOf (GridHandle handle) = do
     coll <- gridTreeGet
     let children = getHierarchyChildrenOf coll handle
@@ -75,7 +75,7 @@ childrenOf (GridHandle handle) = do
 --------------------------------------------------------------------------------
 
 
-addChildAbsolute :: GridHandle s -> Grid 'Absolute -> GridTree s (Maybe (GridHandle s))
+addChildAbsolute :: GridHandle s -> Grid 'Absolute -> GridMonad s (Maybe (GridHandle s))
 addChildAbsolute (GridHandle parent) grid = case isGridEmpty grid of
     True -> return Nothing
     False -> do
@@ -87,14 +87,14 @@ addChildAbsolute (GridHandle parent) grid = case isGridEmpty grid of
                 return $ Just $ GridHandle childHandle
 
 
-addChildRelative :: GridHandle s -> Grid 'Relative -> GridTree s (Maybe (GridHandle s))
+addChildRelative :: GridHandle s -> Grid 'Relative -> GridMonad s (Maybe (GridHandle s))
 addChildRelative parent grid = do
     boundary <- boundaryOf parent
     let grid' = grid `inReferenceTo` boundary
     addChild parent grid'
 
 
-addChildCut :: GridHandle s -> GridCut -> GridTree s (Maybe (GridHandle s, GridHandle s))
+addChildCut :: GridHandle s -> GridCut -> GridMonad s (Maybe (GridHandle s, GridHandle s))
 addChildCut parentHandle gridCut = do 
     parentGrid <- boundaryOf parentHandle
     let (lowGrid, highGrid) = gridCut `inReferenceTo` parentGrid
@@ -106,7 +106,7 @@ addChildCut parentHandle gridCut = do
 
 
 class AddChild (s :: *) (gridLike :: *) (handleResult :: *) | s gridLike -> handleResult, handleResult -> s where
-    addChild :: GridHandle s -> gridLike -> GridTree s handleResult
+    addChild :: GridHandle s -> gridLike -> GridMonad s handleResult
 
 
 instance AddChild s (Grid 'Absolute) (Maybe (GridHandle s)) where

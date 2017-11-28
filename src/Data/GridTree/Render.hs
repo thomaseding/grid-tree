@@ -18,7 +18,7 @@ module Data.GridTree.Render (
 ) where
 
 import Data.GridTree.Geometry
-import Data.GridTree.GridTree
+import Data.GridTree.Monad
 
 
 --------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ data CutResult :: * -> * where
 --------------------------------------------------------------------------------
 
 
-renderCutDescM :: GridHandle s -> CutDescription a -> GridTree s (CutResult a)
+renderCutDescM :: GridHandle s -> CutDescription a -> GridMonad s (CutResult a)
 renderCutDescM currHandle desc = do
     currGrid <- boundaryOf currHandle
     case desc of
@@ -73,7 +73,7 @@ class GridRender (gridIn :: *) (gridOut :: *) | gridIn -> gridOut where
 
 
 instance GridRender (CutDescription a) (CutResult a) where
-    gridRender boundary cutDesc = runGridTree boundary $ do
+    gridRender boundary cutDesc = runGridMonad boundary $ do
         rootHandle <- getRootHandle
         renderCutDescM rootHandle cutDesc
 
