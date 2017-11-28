@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -31,12 +32,15 @@ import Data.GridTree.Prim.HierarchyCollection
 --------------------------------------------------------------------------------
 
 
-newtype GridHandle (s :: *) = GridHandle HierarchyHandle
+newtype GridHandle :: * -> * where
+    GridHandle :: HierarchyHandle -> GridHandle s
 
 
-newtype GridTree (s :: *) (a :: *) = GridTree {
-    unGridTree :: State HierarchyCollection a
-} deriving (Functor, Applicative, Monad)
+newtype GridTree :: * -> * -> * where
+    GridTree :: {
+        unGridTree :: State HierarchyCollection a }
+        -> GridTree s a
+    deriving (Functor, Applicative, Monad)
 
 
 runGridTree :: forall a. Grid 'Absolute -> (forall s. GridTree s a) -> a
@@ -72,31 +76,26 @@ childrenOf (GridHandle handle) = do
     return $ map GridHandle children
 
 
-class AddChild (s :: *) (gridLike :: *) (handleResult :: *) | s gridLike -> handleResult, handleResult -> s where
-    addChild :: GridHandle s -> gridLike -> GridTree s handleResult
+--------------------------------------------------------------------------------
 
 
-instance AddChild s (Grid 'Absolute) (Maybe (GridHandle s)) where
-    addChild (GridHandle parent) grid = case isGridEmpty grid of
-        True -> return Nothing
-        False -> do
-            coll <- gridTreeGet
-            case addHierarchyGrid grid parent coll of
-                Nothing -> return Nothing
-                Just (coll', childHandle) -> do
-                    gridTreePut coll'
-                    return $ Just $ GridHandle childHandle
+addChildAbsolute :: GridHandle s -> Grid 'Absolute -> GridTree s (Maybe (GridHandle s))
+addChildAbsolute (GridHandle parent) grid = case isGridEmpty grid of
+    True -> return Nothing
+    False -> do
+        coll <- gridTreeGet
+        case addHierarchyGrid grid parent coll of
+            Nothing -> return Nothing
+            Just (coll', childHandle) -> do
+                gridTreePut coll'
+                return $ Just $ GridHandle childHandle
 
 
-addChildSimple :: (InReferenceTo grid (Grid 'Absolute) (Grid 'Absolute)) => GridHandle s -> grid -> GridTree s (Maybe (GridHandle s))
-addChildSimple parent grid = do
+addChildRelative :: GridHandle s -> Grid 'Relative -> GridTree s (Maybe (GridHandle s))
+addChildRelative parent grid = do
     boundary <- boundaryOf parent
     let grid' = grid `inReferenceTo` boundary
     addChild parent grid'
-
-
-instance AddChild s (Grid 'Relative) (Maybe (GridHandle s)) where
-    addChild = addChildSimple
 
 
 addChildCut :: GridHandle s -> GridCut -> GridTree s (Maybe (GridHandle s, GridHandle s))
@@ -110,6 +109,18 @@ addChildCut parentHandle gridCut = do
             Just highHandle -> return $ Just (lowHandle, highHandle)
 
 
+class AddChild (s :: *) (gridLike :: *) (handleResult :: *) | s gridLike -> handleResult, handleResult -> s where
+    addChild :: GridHandle s -> gridLike -> GridTree s handleResult
+
+
+instance AddChild s (Grid 'Absolute) (Maybe (GridHandle s)) where
+    addChild = addChildAbsolute
+
+
+instance AddChild s (Grid 'Relative) (Maybe (GridHandle s)) where
+    addChild = addChildRelative
+
+
 instance AddChild s GridCut (Maybe (GridHandle s, GridHandle s)) where
     addChild = addChildCut
 
@@ -120,18 +131,25 @@ instance AddChild s GridCut (Maybe (GridHandle s, GridHandle s)) where
 data CutDescription :: * -> * where
     CutLeaf :: a -> CutDescription a
     CutBranch :: GridCut -> CutDescription a -> CutDescription a -> CutDescription a
+    deriving (Show, Eq, Ord, Foldable, Functor, Traversable)
 
 
-data CutContext = CutContext {
-    _cutContextGrid :: Grid 'Absolute,
-    _cutContextCut :: GridCut
-}
+data CutContext :: * where
+    CutContext :: {
+        _cutContextGrid :: Grid 'Absolute,
+        _cutContextCut :: GridCut }
+        -> CutContext
+    deriving (Show, Eq, Ord)
 
 
 data CutResult :: * -> * where
     LeafGrid :: Grid 'Absolute -> a -> CutResult a
     InvalidCut :: CutContext -> CutResult a
     ValidCut :: CutContext -> CutResult a -> CutResult a -> CutResult a
+    deriving (Show, Eq, Ord, Foldable, Functor, Traversable)
+
+
+--------------------------------------------------------------------------------
 
 
 renderCutDescM :: GridHandle s -> CutDescription a -> GridTree s (CutResult a)
@@ -139,16 +157,16 @@ renderCutDescM currHandle desc = do
     currGrid <- boundaryOf currHandle
     case desc of
         CutLeaf value -> return $ LeafGrid currGrid value
-        CutBranch gridCut leftDesc rightDesc -> let
+        CutBranch gridCut lowDesc highDesc -> let
             cutContext = CutContext {
                 _cutContextGrid = currGrid,
                 _cutContextCut = gridCut }
             in addChild currHandle gridCut >>= \case
                 Nothing -> return $ InvalidCut cutContext
-                Just (leftHandle, rightHandle) -> do
-                    leftResult <- renderCutDescM leftHandle leftDesc
-                    rightResult <- renderCutDescM rightHandle rightDesc
-                    return $ ValidCut cutContext leftResult rightResult
+                Just (lowHandle, highHandle) -> do
+                    lowResult <- renderCutDescM lowHandle lowDesc
+                    highResult <- renderCutDescM highHandle highDesc
+                    return $ ValidCut cutContext lowResult highResult
 
 
 --------------------------------------------------------------------------------
