@@ -30,7 +30,10 @@ import Data.Ratio
 --------------------------------------------------------------------------------
 
 
-data Position = Absolute | Relative
+data Position :: * where
+    Absolute :: Position
+    Relative :: Position
+    deriving (Show, Eq, Ord)
 
 
 data Point :: Position -> * where
@@ -43,19 +46,42 @@ data Grid :: Position -> * where
     deriving (Show, Eq, Ord)
 
 
-data Rounding = RoundDown | RoundUp
+data Rounding :: * where
+    RoundDown :: Rounding
+    RoundUp :: Rounding
+    deriving (Show, Eq, Ord)
 
 
-data CutAxis = CutX | CutY
+data CutAxis :: * where
+    CutX :: CutAxis
+    CutY :: CutAxis
+    deriving (Show, Eq, Ord)
 
 
-data GridCut = GridCut {
-    _cutAxis :: CutAxis,
-    _cutRounding :: Rounding,
-    _cutRatio :: Rational,
-    _cutMin :: Maybe Int,
-    _cutMax :: Maybe Int
-}
+data GridCut :: * where
+    GridCut :: {
+        _cutAxis :: CutAxis,
+        _cutRounding :: Rounding,
+        _cutRatio :: Rational,
+        _cutMin :: Maybe Int,
+        _cutMax :: Maybe Int }
+        -> GridCut
+    deriving (Show, Eq, Ord)
+
+
+--------------------------------------------------------------------------------
+
+
+liftPoint2 :: (Int -> Int -> Int) -> Point p -> Point p -> Point p
+liftPoint2 f (Point x y) (Point x' y') = Point (f x x') (f y y')
+
+
+vectorAdd :: Point a -> Point a -> Point a
+vectorAdd = liftPoint2 (+)
+
+
+vectorSubtract :: Point a -> Point a -> Point a
+vectorSubtract = liftPoint2 (-)
 
 
 castPoint :: Point p -> Point p'
@@ -79,21 +105,6 @@ intersectsGrid g (Grid p1 p2) = let
     in intersectsPoint g p1 || intersectsPoint g p3
 
 
-class ToRelative (a :: *) (b :: Position -> *) | a -> b where
-    toRelative :: a -> b 'Relative
-
-
-instance ToRelative (Grid 'Relative) Grid where
-    toRelative = id
-
-
-instance ToRelative (Grid 'Absolute) Grid where
-    toRelative (Grid lower upper) = let
-        lower' = Point 0 0
-        upper' = castPoint $ upper `vectorSubtract` lower
-        in Grid lower' upper'
-
-
 dimensionsOf :: (ToRelative (Grid p) Grid) => Grid p -> (Int, Int)
 dimensionsOf grid = let
     Grid _ upper = toRelative grid
@@ -105,18 +116,6 @@ isGridEmpty :: (ToRelative (Grid p) Grid) => Grid p -> Bool
 isGridEmpty grid = let
     (w, h) = dimensionsOf grid
     in w > 0 && h > 0
-
-
-liftPoint2 :: (Int -> Int -> Int) -> Point p -> Point p -> Point p
-liftPoint2 f (Point x y) (Point x' y') = Point (f x x') (f y y')
-
-
-vectorAdd :: Point a -> Point a -> Point a
-vectorAdd = liftPoint2 (+)
-
-
-vectorSubtract :: Point a -> Point a -> Point a
-vectorSubtract = liftPoint2 (-)
 
 
 roundImpl :: Int -> Rational -> Int
@@ -136,6 +135,27 @@ roundUp :: Rational -> Int
 roundUp = roundImpl 1
 
 
+--------------------------------------------------------------------------------
+
+
+class ToRelative (a :: *) (b :: Position -> *) | a -> b where
+    toRelative :: a -> b 'Relative
+
+
+instance ToRelative (Grid 'Relative) Grid where
+    toRelative = id
+
+
+instance ToRelative (Grid 'Absolute) Grid where
+    toRelative (Grid lower upper) = let
+        lower' = Point 0 0
+        upper' = castPoint $ upper `vectorSubtract` lower
+        in Grid lower' upper'
+
+
+--------------------------------------------------------------------------------
+
+
 class Move (grid :: *) (point :: *) where
     move :: grid -> point -> grid
 
@@ -153,6 +173,9 @@ instance Move (Grid 'Absolute) (Point 'Relative) where
 
 instance Move (Grid 'Absolute) (Point 'Absolute) where
     move g p = castGrid $ move (toRelative g) (castPoint p :: Point 'Relative)
+
+
+--------------------------------------------------------------------------------
 
 
 class InReferenceTo (a :: *) (b :: *) (c :: *) | a b -> c where
