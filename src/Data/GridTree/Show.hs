@@ -9,10 +9,14 @@ module Data.GridTree.Show (
 ) where
 
 
+import Data.DList (DList)
+import Data.Function (on)
 import Data.GridTree.Geometry (Position(..), Point(..), Grid(..), inReferenceTo)
+import Data.GridTree.Render (CutResult(..))
 import Data.List (foldl', intercalate)
 import Data.Map (Map)
 
+import qualified Data.DList as DList
 import qualified Data.Map as Map
 
 
@@ -85,15 +89,51 @@ instance ShowGrid () (Grid 'Relative) where
         in showGrid toChar grid'
 
 
+
+cutResultGrids :: CutResult a -> [Grid 'Absolute]
+cutResultGrids = DList.toList . cutResultGrids'
+
+
+cutResultGrids' :: CutResult a -> DList (Grid 'Absolute)
+cutResultGrids' = \case
+    LeafGrid g _ -> DList.singleton g
+    InvalidCut _ -> DList.empty
+    ValidCut _ l r -> (DList.append `on` cutResultGrids') l r
+
+
+instance ShowGrid Char [Grid 'Absolute] where
+    showGrid toChar grids = let
+        fills = map flip $ map fillByAbsoluteGrid $ let
+            num = ['0'..'9']
+            upper = ['A'..'Z']
+            lower = ['a'..'z']
+            exhausted = repeat '?'
+            in num ++ upper ++ lower ++ exhausted
+        fills' = zipWith ($) fills grids
+        pointMap = foldl' (\x f -> f x) Map.empty fills'
+        str = showPointMap toChar pointMap
+        in str
+
+
+instance ShowGrid Char (CutResult a) where
+    showGrid toChar cutResult = let
+        grids = cutResultGrids cutResult
+        in showGrid toChar grids
+
+
 test :: IO ()
 test = do
-    let lower = Point (-2) (2)
-        upper = Point 3 9
-        grid = Grid lower upper :: Grid 'Relative
+    let lowerA = Point 0 0
+        upperA = Point 3 3
+        gridA = Grid lowerA upperA :: Grid 'Absolute
+        lowerB = Point (-1) 0
+        upperB = Point 1 5
+        gridB = Grid lowerB upperB :: Grid 'Absolute
+        grids = [gridA, gridB]
         toChar = \case
             Nothing -> ' '
-            Just () -> 'X'
-        str = showGrid toChar grid
+            Just c -> c
+        str = showGrid toChar grids
     putStrLn str
 
 
