@@ -38,7 +38,7 @@ instance GridCollection BoundedCollection BoundedHandle where
     gridCollectionAdd g (BoundedCollection boundary disjointCollection) = let
         Grid p1 p2 = g
         i1 = intersectsPoint boundary p1
-        i2 = intersectsPoint boundary p2
+        i2 = intersectsPoint boundary (p2 `vectorSubtract` Point 1 1)
         in case i1 && i2 of
             False -> Nothing
             True -> case gridCollectionAdd g disjointCollection of

@@ -20,6 +20,8 @@ module Data.GridTree.Geometry (
     isGridEmpty,
     intersectsPoint,
     intersectsGrid,
+    vectorAdd,
+    vectorSubtract,
 ) where
 
 
