@@ -105,14 +105,14 @@ intersectsGrid g (Grid p1 p2) = let
     in intersectsPoint g p1 || intersectsPoint g p3
 
 
-dimensionsOf :: (ToRelative (Grid p) Grid) => Grid p -> (Int, Int)
+dimensionsOf :: Grid p -> (Int, Int)
 dimensionsOf grid = let
     Grid lower upper = grid
     Point w h = upper `vectorSubtract` lower
     in (w, h)
 
 
-isGridEmpty :: (ToRelative (Grid p) Grid) => Grid p -> Bool
+isGridEmpty :: Grid p -> Bool
 isGridEmpty grid = let
     (w, h) = dimensionsOf grid
     in w == 0 || h == 0
@@ -214,7 +214,7 @@ cutGridY cutIndex (Grid (Point xl yl) (Point xu yu)) = let
 instance InReferenceTo GridCut (Grid 'Absolute) (Grid 'Absolute, Grid 'Absolute) where
     inReferenceTo gridCut absoluteProto = let
         Grid (Point xOffset yOffset) _ = absoluteProto
-        (width, height) :: (Int, Int) = dimensionsOf $ toRelative absoluteProto
+        (width, height) :: (Int, Int) = dimensionsOf absoluteProto
         (dim, offset, cutter) = case cutAxis of
             CutX -> (width, xOffset, cutGridX)
             CutY -> (height, yOffset, cutGridY)
