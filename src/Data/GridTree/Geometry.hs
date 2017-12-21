@@ -107,8 +107,8 @@ intersectsGrid g (Grid p1 p2) = let
 
 dimensionsOf :: (ToRelative (Grid p) Grid) => Grid p -> (Int, Int)
 dimensionsOf grid = let
-    Grid _ upper = toRelative grid
-    Point w h = upper
+    Grid lower upper = grid
+    Point w h = upper `vectorSubtract` lower
     in (w, h)
 
 
