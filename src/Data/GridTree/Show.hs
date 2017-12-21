@@ -12,6 +12,7 @@ module Data.GridTree.Show (
 import Data.DList (DList)
 import Data.Function (on)
 import Data.GridTree.Geometry
+import Data.GridTree.Monad
 import Data.GridTree.Render (CutDescription(..), CutResult(..), gridRender)
 import Data.List (foldl', intercalate)
 import Data.Map (Map)
@@ -185,9 +186,48 @@ test4 = do
     putStrLn $ showGrid toChar cutResult
 
 
--- XXX: Buggy
 test5 :: IO ()
 test5 = do
+    let lowerA = Point 0 0
+        upperA = Point 10 10
+        gridA = Grid lowerA upperA :: Grid 'Absolute
+        lowerB = Point 0 0
+        upperB = Point 10 9
+        gridB = Grid lowerB upperB :: Grid 'Absolute
+        grid = runGridMonad gridA $ do
+            rootHandle <- getRootHandle
+            mKid <- addChild rootHandle gridB
+            case mKid of
+                Nothing -> error "test failure"
+                Just handle -> boundaryOf handle
+    print grid
+
+
+test6 :: IO ()
+test6 = do
+    let lower = Point 0 0
+        upper = Point 10 10
+        grid = Grid lower upper :: Grid 'Absolute
+        cut = GridCut {
+            _cutAxis = CutY,
+            _cutRounding = RoundDown,
+            _cutRatio = 0.5,
+            _cutMin = Nothing,
+            _cutMax = Nothing }
+        grids = runGridMonad grid $ do
+            rootHandle <- getRootHandle
+            mKids <- addChild rootHandle cut
+            case mKids of
+                Nothing -> error "test failure"
+                Just (lHandle, rHandle) -> do
+                    lGrid <- boundaryOf lHandle
+                    rGrid <- boundaryOf rHandle
+                    return (lGrid, rGrid)
+    print grids
+
+
+test7 :: IO ()
+test7 = do
     let toChar = \case
             Nothing -> ' '
             Just c -> c
@@ -208,9 +248,8 @@ test5 = do
     putStrLn $ showGrid toChar cutResult
 
 
--- XXX: Buggy
-test6 :: IO ()
-test6 = do
+test8 :: IO ()
+test8 = do
     let toChar = \case
             Nothing -> ' '
             Just c -> c
@@ -222,14 +261,14 @@ test6 = do
             cut0 = GridCut {
                 _cutAxis = CutX,
                 _cutRounding = RoundDown,
-                _cutRatio = 0.5,
+                _cutRatio = 0.66,
                 _cutMin = Nothing,
                 _cutMax = Nothing }
             left0 = let
                 cut1 = GridCut {
                     _cutAxis = CutY,
                     _cutRounding = RoundDown,
-                    _cutRatio = 0.5,
+                    _cutRatio = 0.3,
                     _cutMin = Nothing,
                     _cutMax = Nothing }
                 left1 = leaf
@@ -239,7 +278,7 @@ test6 = do
                 cut1 = GridCut {
                     _cutAxis = CutX,
                     _cutRounding = RoundUp,
-                    _cutRatio = 0.5,
+                    _cutRatio = 0.51,
                     _cutMin = Nothing,
                     _cutMax = Nothing }
                 left1 = leaf
