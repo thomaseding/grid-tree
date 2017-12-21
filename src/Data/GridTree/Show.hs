@@ -11,8 +11,8 @@ module Data.GridTree.Show (
 
 import Data.DList (DList)
 import Data.Function (on)
-import Data.GridTree.Geometry (Position(..), Point(..), Grid(..), inReferenceTo)
-import Data.GridTree.Render (CutResult(..))
+import Data.GridTree.Geometry
+import Data.GridTree.Render (CutDescription(..), CutResult(..), gridRender)
 import Data.List (foldl', intercalate)
 import Data.Map (Map)
 
@@ -89,18 +89,6 @@ instance ShowGrid () (Grid 'Relative) where
         in showGrid toChar grid'
 
 
-
-cutResultGrids :: CutResult a -> [Grid 'Absolute]
-cutResultGrids = DList.toList . cutResultGrids'
-
-
-cutResultGrids' :: CutResult a -> DList (Grid 'Absolute)
-cutResultGrids' = \case
-    LeafGrid g _ -> DList.singleton g
-    InvalidCut _ -> DList.empty
-    ValidCut _ l r -> (DList.append `on` cutResultGrids') l r
-
-
 instance ShowGrid Char [Grid 'Absolute] where
     showGrid toChar grids = let
         fills = map flip $ map fillByAbsoluteGrid $ let
@@ -115,25 +103,151 @@ instance ShowGrid Char [Grid 'Absolute] where
         in str
 
 
+cutResultGrids :: CutResult a -> [Grid 'Absolute]
+cutResultGrids = DList.toList . cutResultGrids'
+
+
+cutResultGrids' :: CutResult a -> DList (Grid 'Absolute)
+cutResultGrids' = \case
+    LeafGrid g _ -> DList.singleton g
+    InvalidCut _ -> DList.empty
+    ValidCut _ l r -> (DList.append `on` cutResultGrids') l r
+
+
 instance ShowGrid Char (CutResult a) where
     showGrid toChar cutResult = let
         grids = cutResultGrids cutResult
         in showGrid toChar grids
 
 
-test :: IO ()
-test = do
-    let lowerA = Point 0 0
+test1 :: IO ()
+test1 = do
+    let toChar = \case
+            Nothing -> ' '
+            Just c -> c
+        lowerA = Point 0 0
         upperA = Point 3 3
         gridA = Grid lowerA upperA :: Grid 'Absolute
         lowerB = Point (-1) 0
         upperB = Point 1 5
         gridB = Grid lowerB upperB :: Grid 'Absolute
         grids = [gridA, gridB]
-        toChar = \case
+    putStrLn $ showGrid toChar grids
+
+
+test2 :: IO ()
+test2 = do
+    let toChar = \case
+            Nothing -> ' '
+            Just () -> 'X'
+        lower = Point 0 0
+        upper = Point 3 3
+        grid = Grid lower upper :: Grid 'Absolute
+    putStrLn $ showGrid toChar grid
+
+
+test3 :: IO ()
+test3 = do
+    let toChar = \case
             Nothing -> ' '
             Just c -> c
-        str = showGrid toChar grids
-    putStrLn str
+        lower = Point 0 0
+        upper = Point 10 10
+        grid = Grid lower upper :: Grid 'Absolute
+        cut = GridCut {
+            _cutAxis = CutY,
+            _cutRounding = RoundDown,
+            _cutRatio = 0.5,
+            _cutMin = Nothing,
+            _cutMax = Nothing }
+        cutResult = cut `inReferenceTo` grid
+        (lowGrid, highGrid) = cutResult
+        gridsA = [lowGrid, highGrid]
+        gridsB = reverse gridsA
+    print cutResult
+    putStrLn $ showGrid toChar gridsA
+    putStrLn "--------------"
+    putStrLn $ showGrid toChar gridsB
+
+
+test4 :: IO ()
+test4 = do
+    let toChar = \case
+            Nothing -> ' '
+            Just c -> c
+        lower = Point 0 0
+        upper = Point 10 10
+        grid = Grid lower upper :: Grid 'Absolute
+        leaf = CutLeaf ()
+        cutDesc = leaf
+        cutResult = gridRender grid cutDesc
+    print cutResult
+    putStrLn $ showGrid toChar cutResult
+
+
+-- XXX: Buggy
+test5 :: IO ()
+test5 = do
+    let toChar = \case
+            Nothing -> ' '
+            Just c -> c
+        lower = Point 0 0
+        upper = Point 10 10
+        grid = Grid lower upper :: Grid 'Absolute
+        leaf = CutLeaf ()
+        cutDesc = let
+            cut = GridCut {
+                _cutAxis = CutY,
+                _cutRounding = RoundDown,
+                _cutRatio = 0.5,
+                _cutMin = Nothing,
+                _cutMax = Nothing }
+            in CutBranch cut leaf leaf
+        cutResult = gridRender grid cutDesc
+    print cutResult
+    putStrLn $ showGrid toChar cutResult
+
+
+-- XXX: Buggy
+test6 :: IO ()
+test6 = do
+    let toChar = \case
+            Nothing -> ' '
+            Just c -> c
+        lower = Point 0 0
+        upper = Point 20 20
+        grid = Grid lower upper :: Grid 'Absolute
+        leaf = CutLeaf ()
+        cutDesc = let
+            cut0 = GridCut {
+                _cutAxis = CutX,
+                _cutRounding = RoundDown,
+                _cutRatio = 0.5,
+                _cutMin = Nothing,
+                _cutMax = Nothing }
+            left0 = let
+                cut1 = GridCut {
+                    _cutAxis = CutY,
+                    _cutRounding = RoundDown,
+                    _cutRatio = 0.5,
+                    _cutMin = Nothing,
+                    _cutMax = Nothing }
+                left1 = leaf
+                right1 = leaf
+                in CutBranch cut1 left1 right1
+            right0 = let
+                cut1 = GridCut {
+                    _cutAxis = CutX,
+                    _cutRounding = RoundUp,
+                    _cutRatio = 0.5,
+                    _cutMin = Nothing,
+                    _cutMax = Nothing }
+                left1 = leaf
+                right1 = leaf
+                in CutBranch cut1 left1 right1
+            in CutBranch cut0 left0 right0
+        cutResult = gridRender grid cutDesc
+    print cutResult
+    putStrLn $ showGrid toChar cutResult
 
 
