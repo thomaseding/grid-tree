@@ -222,8 +222,8 @@ instance InReferenceTo GridCut (Grid 'Absolute) (Grid 'Absolute, Grid 'Absolute)
         cutAxis :: CutAxis = _cutAxis gridCut
         cutRounding :: Rounding = _cutRounding gridCut
         cutRatio :: Rational = max 0 $ min 1 $ _cutRatio gridCut
-        cutMin :: Int = max 0 $ max dim $ maybe 0 id $ _cutMin gridCut
-        cutMax :: Int = max 0 $ max dim $ maybe dim id $ _cutMax gridCut
+        cutMin :: Int = max 0 $ min dim $ maybe 0 id $ _cutMin gridCut
+        cutMax :: Int = max 0 $ min dim $ maybe dim id $ _cutMax gridCut
         --
         cutIndex :: Int = let
             rounder = case cutRounding of
