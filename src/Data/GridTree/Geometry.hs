@@ -115,7 +115,7 @@ dimensionsOf grid = let
 isGridEmpty :: (ToRelative (Grid p) Grid) => Grid p -> Bool
 isGridEmpty grid = let
     (w, h) = dimensionsOf grid
-    in w > 0 && h > 0
+    in w == 0 || h == 0
 
 
 roundImpl :: Int -> Rational -> Int
