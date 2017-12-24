@@ -22,6 +22,7 @@ module Data.GridTree.Geometry (
     intersectsGrid,
     vectorAdd,
     vectorSubtract,
+    dimensionsOf,
 ) where
 
 
