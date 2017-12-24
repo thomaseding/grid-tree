@@ -47,9 +47,9 @@ framedText frame doc renderer = let
         --  (SLine 0 (SText indentLevel spaces rest))
         SLine !indentLevel rest -> case currHeight == totalHeight of
             True -> SEmpty
-            False -> case currWidth + indentLevel > totalWidth of
+            False -> case indentLevel > totalWidth of
                 True -> confine totalWidth (currHeight + 1) rest
-                False -> SLine indentLevel $ confine (currWidth + indentLevel) (currHeight + 1) rest
+                False -> SLine indentLevel $ confine indentLevel (currHeight + 1) rest
         SAnnPush ann rest -> SAnnPush ann $ confine currWidth currHeight rest
         SAnnPop rest -> SAnnPop $ confine currWidth currHeight rest
     --
